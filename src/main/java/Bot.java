@@ -8,14 +8,17 @@ import sx.blah.discord.util.MessageBuilder;
 import sx.blah.discord.util.MissingPermissionsException;
 import sx.blah.discord.util.RateLimitException;
 
+import java.io.*;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
- * Created by mlase on 9/18/2016.
+ * Created by mattylase on 9/18/2016.
  */
 public class Bot {
 
-    private static String token = "MjI3MTk1MjE4MzY0MDcxOTM2.CsCoKw.aXZE3Mw1rfHTYaveUvbWkBybcEQ";
+    private static String tokenFile = "token.rupert";
     private static String preamble = "If you need a friend, than you can depend on ";
     private static String finish = "!! Ready to pown yall?";
     private static String noFriends = " has no friends. Anyone @here care to join them?";
@@ -23,10 +26,18 @@ public class Bot {
 
     public static void main(String[] args) {
         try {
+            BufferedReader reader = new BufferedReader(new FileReader(new File(tokenFile)));
+            String token = reader.readLine();
+            reader.close();
+
             client = getClient(token, true);
             client.getDispatcher().registerListener(new Listener());
-        } catch (DiscordException e) {
-            e.printStackTrace();
+        } catch (IOException | DiscordException e) {
+            Logger.getGlobal().log(Level.ALL, "There was a problem initializing the Discord client!");
+        } finally {
+            if (client == null) {
+                System.exit(10);
+            }
         }
     }
 

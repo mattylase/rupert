@@ -1,0 +1,25 @@
+group 'sweven.software'
+version '1.0-SNAPSHOT'
+
+apply plugin: 'java'
+
+task fatJar(type: Jar) {
+    baseName = project.name
+    manifest {
+        attributes 'Main-Class' : 'Bot'
+    }
+    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    with jar
+}
+
+repositories {
+    mavenCentral()
+    jcenter()
+    maven {
+        url "https://jitpack.io"
+    }
+}
+
+dependencies {
+    compile "com.github.austinv11:Discord4j:2.6.0"
+}

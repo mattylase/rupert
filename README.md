@@ -6,7 +6,11 @@
 Rupert uses Gradle, and can be packaged up with `gradle fatJar`
 
 ## Running Rupert
-Rupert can be run from the command line as `java -jar Rupert-1.0.jar`
+Rupert can be run from the command line as `java -jar Rupert-1.0.jar`. Rupert will expect your bot's token to be in a file called `token.rupert` in the same directory that the jar resides in.
 
 ## Using Rupert
-Rupert will listen on every text channel for people waiting to **R**eady **Up** can be activated by either the `/rup` or `/rupert` commands. He is at his best when you are in a voice channel, preferably with other members of your server.
+Rupert will listen on every text channel for people waiting to **R**eady **Up** can be activated by either the `/rup` or `/rupert` commands. He is at his best when you are in a voice channel with some friends, but will do his best to help you out even when you're alone.
+
+
+
+#### Thanks to [Discord4J](https://github.com/austinv11/Discord4J) for making Rupert the bear he is today.

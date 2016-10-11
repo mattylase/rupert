@@ -1,4 +1,4 @@
-# Rupert!
+<img align="right" src="https://github.com/mattylase/rupert/blob/develop/rupert.jpg" height="250">
 
 [Rupert](https://www.youtube.com/watch?v=hxwFaH7l53Y) is a Discord bot that wants you to ready up. He specializes in quickly getting the attention of everyone in your current voice channel, so they know to let everyone know that they're done peeing or getting a beer or putting the dog out or receiving a pizza or whatever.
 

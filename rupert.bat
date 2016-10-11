@@ -1,1 +1,1 @@
-java -jar C:\Users\mlase\Documents\GitHub\Rupert\build\libs\Rupert-1.0-SNAPSHOT.jar
+java -jar C:\Users\mlase\Documents\GitHub\Rupert\build\libs\Rupert-1.0.jar

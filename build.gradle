@@ -4,7 +4,8 @@ version '1.0-SNAPSHOT'
 apply plugin: 'java'
 
 task fatJar(type: Jar) {
-    baseName = project.name
+    baseName = 'Rupert'
+    version = '1.0'
     manifest {
         attributes 'Main-Class' : 'Bot'
     }

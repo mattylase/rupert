@@ -9,7 +9,7 @@ import sx.blah.discord.util.MissingPermissionsException;
 import sx.blah.discord.util.RateLimitException;
 
 import java.io.*;
-import java.util.List;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -18,17 +18,41 @@ import java.util.logging.Logger;
  */
 public class Bot {
 
-    private static String tokenFile = "token.rupert";
-    private static String preamble = "If you need a friend, than you can depend on ";
-    private static String finish = "!! Ready to pown yall?";
-    private static String noFriends = " has no friends. Anyone @here care to join them?";
+    private static final String TOKEN_FILE_PATH = "token.rupert";
+    private static final String USER_FILE_PATH = "rupert_users";
+
+    private static final String PREAMBLE = "If you need a friend, than you can depend on ";
+    private static final String FINISH = "!! Ready to pown yall?";
+    private static final String NO_FRIENDS = "@everyone could use a friend, including %s. Want to play a game?";
+
+    static class Keys {
+        static final String SUBSCRIBED_TO_VOICE_EVENTS = "SUBSCRIBED_TO_VOICE_EVENTS";
+        static final String TEST = "BUTTS";
+    }
+
     private static IDiscordClient client;
+    private static volatile Map<String, File> userFileMap;
+    private static Set<String> subscribedToVoiceEventSet;
 
     public static void main(String[] args) {
         try {
-            BufferedReader reader = new BufferedReader(new FileReader(new File(tokenFile)));
-            String token = reader.readLine();
-            reader.close();
+            BufferedReader tokenReader = new BufferedReader(new FileReader(new File(TOKEN_FILE_PATH)));
+            String token = tokenReader.readLine();
+            tokenReader.close();
+
+
+            // Cache existing user files on startup
+            File userDirectory = new File(USER_FILE_PATH);
+            userDirectory.mkdir();
+            userFileMap = new HashMap<>();
+            if (userDirectory.exists()) {
+                File[] userFiles = userDirectory.listFiles();
+                if (userFiles != null) {
+                    Arrays.stream(userFiles).forEach(f -> userFileMap.put(f.getName(), f));
+                }
+            }
+
+            subscribedToVoiceEventSet = preCacheData(Keys.SUBSCRIBED_TO_VOICE_EVENTS);
 
             client = getClient(token, true);
             client.getDispatcher().registerListener(new Listener());
@@ -41,25 +65,21 @@ public class Bot {
         }
     }
 
-    public static void say(String words, IChannel channel) {
+    static void say(String words, IChannel channel) {
         try {
             new MessageBuilder(client).withChannel(channel).withContent(words).send();
-        } catch (RateLimitException e) {
-            e.printStackTrace();
-        } catch (DiscordException e) {
-            e.printStackTrace();
-        } catch (MissingPermissionsException e) {
+        } catch (DiscordException | RateLimitException | MissingPermissionsException e) {
             e.printStackTrace();
         }
     }
 
-    public static void pingVoiceMembers(IVoiceChannel voiceChannel, IChannel textChannel) {
+    static void pingVoiceMembers(IVoiceChannel voiceChannel, IChannel textChannel) {
         List<IUser> users = voiceChannel.getConnectedUsers();
         String message;
         if (users.size() == 1) {
-            message = users.get(0).mention(true) + noFriends;
+            message = String.format(NO_FRIENDS, users.get(0));
         } else {
-            message = preamble;
+            message = PREAMBLE;
             for (int i = 0; i < users.size(); i++) {
                 String mention;
                 if (i != users.size() - 1) {
@@ -71,19 +91,113 @@ public class Bot {
                 }
                 message += mention;
             }
-            message += finish;
+            message += FINISH;
         }
         say(message, textChannel);
     }
 
-    public static IDiscordClient getClient(String token, boolean login) throws DiscordException { // Returns an instance of the Discord client
-        ClientBuilder clientBuilder = new ClientBuilder(); // Creates the ClientBuilder instance
-        clientBuilder.withToken(token); // Adds the login info to the builder
+    private static Set<String> preCacheData(String attribute) throws IOException {
+        Set<String> resultSet = new HashSet<>();
+        if (attribute.equals(Keys.SUBSCRIBED_TO_VOICE_EVENTS)) {
+            for (String userName : userFileMap.keySet()) {
+                BufferedReader reader = new BufferedReader(new FileReader(userFileMap.get(userName)));
+                if (reader.readLine().contains(Keys.SUBSCRIBED_TO_VOICE_EVENTS)) {
+                    resultSet.add(userName);
+                }
+            }
+        }
+        return resultSet;
+    }
+
+    private static IDiscordClient getClient(String token, boolean login) throws DiscordException { // Returns an instance of the Discord client
+        ClientBuilder clientBuilder = new ClientBuilder();
+        clientBuilder.withToken(token);
         if (login) {
-            return clientBuilder.login(); // Creates the client instance and logs the client in
+            return clientBuilder.login();
         } else {
-            return clientBuilder.build(); // Creates the client instance but it doesn't log the client in yet, you would have to call client.login() yourself
+            return clientBuilder.build();
         }
     }
 
+    private static File createUserFile(String fileName) {
+        try {
+            File file = new File(USER_FILE_PATH + "/" + fileName);
+            if (file.createNewFile()) {
+                return file;
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    static synchronized void modifyUserAttribute(String userId, String attribute, boolean addAttribute) {
+        if (!userFileMap.containsKey(userId)) {
+            File file = createUserFile(userId);
+            if (file != null) {
+                userFileMap.put(userId, file);
+            }
+        }
+
+        modifyUserFileAttribute(userId, attribute, addAttribute);
+
+        switch (attribute) {
+            case Keys.SUBSCRIBED_TO_VOICE_EVENTS:
+                if (addAttribute) subscribedToVoiceEventSet.add(userId);
+                else subscribedToVoiceEventSet.remove(userId);
+        }
+    }
+
+    static void pmSubs(String joinedUserName, String channelName) {
+        try {
+            for (String userId : subscribedToVoiceEventSet) {
+                IUser user = client.getUserByID(userId);
+                if (!user.getName().equals(joinedUserName)) {
+                    user.getOrCreatePMChannel().sendMessage("Hey boy-o, just a heads up, " + joinedUserName
+                            + " just hopped in " + channelName);
+                }
+            }
+        } catch (MissingPermissionsException | RateLimitException | DiscordException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static synchronized void modifyUserFileAttribute(String userName, String attribute, boolean addAttribute) {
+        File file = userFileMap.get(userName);
+        try {
+            BufferedReader reader = new BufferedReader(new FileReader(file));
+            String line = reader.readLine();
+            StringBuilder output = new StringBuilder();
+            reader.close();
+            if (line != null) {
+                if (line.contains(",")) {
+                    List<String> list = new ArrayList<>(Arrays.asList(line.split(",")));
+                    if (addAttribute && !list.contains(attribute)) {
+                        list.add(attribute);
+                        list.forEach(s -> output.append(s).append(','));
+                    } else {
+                        list.remove(attribute);
+                        list.forEach(s -> output.append(s).append(','));
+                    }
+                } else if (!line.equals(attribute) && addAttribute){
+                    output.append(line).append(',').append(attribute);
+                } else if (addAttribute) {
+                    output.append(line);
+                }
+            } else if (addAttribute) {
+                output.append(attribute);
+            }
+
+            String outString = output.toString();
+            BufferedWriter writer = new BufferedWriter(new FileWriter(userFileMap.get(userName)));
+            if (outString.length() > 1 && outString.charAt(outString.length() - 1) == ',') {
+                outString = outString.substring(0, outString.length() - 1);
+            }
+            writer.write(outString);
+            writer.close();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 }

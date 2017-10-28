@@ -16,23 +16,10 @@ import java.io.*;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
 /**
  * The main class that keeps Rupert chugging. I should probably make this whole thing more OOP, but meh.
  */
 public class Bot {
-
-    private static final String TOKEN_FILE_PATH = "token.rupert";
-
-    private static final String PREAMBLE = "If you need a friend, than you can depend on ";
-    private static final String FINISH = "!! Ready to pown yall?";
-    private static final String NO_FRIENDS = "@everyone could use a friend, including %s. Want to play a game?";
-
-    static class Keys {
-        static final String SUBSCRIBED_TO_VOICE_EVENTS = "SUBSCRIBED_TO_VOICE_EVENTS";
-        static final String TEST = "BUTTS";
-    }
-
     private static IDiscordClient client;
     private static volatile Map<String, File> userFileMap;
     private static Set<String> subscribedToVoiceEventSet;
@@ -40,7 +27,8 @@ public class Bot {
 
     public static void main(String[] args) {
         try {
-            BufferedReader tokenReader = new BufferedReader(new FileReader(new File(TOKEN_FILE_PATH)));
+            BufferedReader tokenReader = new BufferedReader(
+                    new FileReader(new File(Constants.Paths.TOKEN_FILE_PATH)));
             String token = tokenReader.readLine();
             tokenReader.close();
 
@@ -56,7 +44,7 @@ public class Bot {
                 }
             }
 
-            subscribedToVoiceEventSet = preCacheData(Keys.SUBSCRIBED_TO_VOICE_EVENTS);
+            subscribedToVoiceEventSet = preCacheData(Constants.Keys.SUBSCRIBED_TO_VOICE_EVENTS);
 
             client = getClient(token, true);
             client.getDispatcher().registerListener(new Listener());
@@ -64,7 +52,7 @@ public class Bot {
             // Try to say hello on the default channel, if it exists
             client.getChannels().forEach(channel -> {
                 if (channel.getName().equals(Constants.Channels.GFNERAL)) {
-                    say(Constants.Responses.HELP, channel);
+                    say(Constants.Responses.HELP, channel, Optional.empty());
                 }
             });
         } catch (IOException | DiscordException e) {
@@ -76,7 +64,7 @@ public class Bot {
         }
     }
 
-    static void say(String words, IChannel channel) {
+    static void say(String words, IChannel channel, Optional<String> playing) {
         if (messageBuilder == null) {
             messageBuilder = new MessageBuilder(client);
         }
@@ -87,13 +75,17 @@ public class Bot {
         }
     }
 
-    static void pingVoiceMembers(IVoiceChannel voiceChannel, IChannel textChannel) {
+    //TODO: String builder
+    static void pingVoiceMembers(IVoiceChannel voiceChannel, IChannel textChannel, Optional<String> playing) {
         List<IUser> users = voiceChannel.getConnectedUsers();
         String message;
         if (users.size() == 1) {
-            message = String.format(NO_FRIENDS, users.get(0));
+            message = String.format(Constants.Responses.NO_FRIENDS, users.get(0));
+            if (playing.isPresent()) {
+                message += String.format(Constants.Responses.VOICE_PLAYING, playing.get());
+            }
         } else {
-            message = PREAMBLE;
+            message = Constants.Responses.VOICE_PREAMBLE;
             for (int i = 0; i < users.size(); i++) {
                 String mention;
                 if (i != users.size() - 1) {
@@ -102,19 +94,26 @@ public class Bot {
                 } else {
                     mention = "and ";
                     mention += users.get(i).mention(true);
+                    mention += '.';
                 }
                 message += mention;
             }
-            message += FINISH;
+
+            if (playing.isPresent()) {
+                message += String.format(Constants.Responses.VOICE_PLAYING, playing.get());
+            } else {
+                message += Constants.Responses.VOICE_FINISH;
+            }
         }
-        say(message, textChannel);
+        say(message, textChannel, Optional.empty());
     }
 
     private static Set<String> preCacheData(String attribute) throws IOException {
         Set<String> resultSet = new HashSet<>();
-        if (attribute.equals(Keys.SUBSCRIBED_TO_VOICE_EVENTS)) {
+        if (attribute.equals(Constants.Keys.SUBSCRIBED_TO_VOICE_EVENTS)) {
             for (String userId : userFileMap.keySet()) {
-                if (FileUtil.instance().fileContainsAttribute(userFileMap.get(userId), Keys.SUBSCRIBED_TO_VOICE_EVENTS)) {
+                if (FileUtil.instance().fileContainsAttribute(userFileMap.get(userId),
+                        Constants.Keys.SUBSCRIBED_TO_VOICE_EVENTS)) {
                     resultSet.add(userId);
                 }
             }
@@ -143,25 +142,26 @@ public class Bot {
         FileUtil.instance().modifyUserFileAttribute(userFileMap.get(userId), attribute, addAttribute);
 
         switch (attribute) {
-            case Keys.SUBSCRIBED_TO_VOICE_EVENTS:
+            case Constants.Keys.SUBSCRIBED_TO_VOICE_EVENTS:
                 if (addAttribute) subscribedToVoiceEventSet.add(userId);
                 else subscribedToVoiceEventSet.remove(userId);
         }
     }
 
-    static void pmSubs(String joinedUserName, String channelName) {
+    static void pmSubs(String joinedUserName, String channelName, Optional<String> playing) {
         try {
             for (String userId : subscribedToVoiceEventSet) {
                 IUser user = client.getUserByID(Long.valueOf(userId));
                 if (!user.getName().equals(joinedUserName)) {
-                    user.getOrCreatePMChannel().sendMessage("Hey boy-o, just a heads up, " + joinedUserName
-                            + " just hopped in " + channelName);
+                    String response = String.format(Constants.Responses.PM_HEADS_UP, joinedUserName, channelName);
+                    if (playing.isPresent()) {
+                        response += String.format(Constants.Responses.VOICE_PLAYING, playing.get());
+                    }
+                    user.getOrCreatePMChannel().sendMessage(response);
                 }
             }
         } catch (MissingPermissionsException | RateLimitException | DiscordException e) {
             e.printStackTrace();
         }
     }
-
-
 }

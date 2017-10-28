@@ -9,6 +9,7 @@ import util.Constants;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * The Listener class reads the chat channels and responds appropriately
@@ -34,30 +35,38 @@ import java.util.List;
                 });
 
                 if (channels.size() == 0) {
-                    Bot.say(Constants.Responses.NOT_IN_VOICE, event.getMessage().getChannel());
+                    Bot.say(Constants.Responses.NOT_IN_VOICE,
+                            event.getMessage().getChannel(), event.getAuthor().getPresence().getPlayingText());
                 } else {
                     IVoiceChannel voiceChannel = channels.get(0);
-                    Bot.pingVoiceMembers(voiceChannel, event.getMessage().getChannel());
+                    Bot.pingVoiceMembers(voiceChannel,
+                            event.getMessage().getChannel(), event.getAuthor().getPresence().getPlayingText());
                 }
             } else if (message.equalsIgnoreCase(Constants.Commands.SUBSCRIBE_1) ||
                     message.equalsIgnoreCase(Constants.Commands.SUBSCRIBE_2)) {
-                Bot.modifyUserAttribute(event.getMessage().getAuthor().getStringID(), Bot.Keys.SUBSCRIBED_TO_VOICE_EVENTS, true);
+                Bot.modifyUserAttribute(event.getMessage().getAuthor().getStringID(),
+                        Constants.Keys.SUBSCRIBED_TO_VOICE_EVENTS, true);
             } else if (message.equalsIgnoreCase(Constants.Commands.UNSUBSCRIBE_1) ||
                     message.equalsIgnoreCase(Constants.Commands.UNSUBSCRIBE_2)) {
-                Bot.modifyUserAttribute(event.getMessage().getAuthor().getStringID(), Bot.Keys.SUBSCRIBED_TO_VOICE_EVENTS, false);
+                Bot.modifyUserAttribute(event.getMessage().getAuthor().getStringID(),
+                        Constants.Keys.SUBSCRIBED_TO_VOICE_EVENTS, false);
             } else if (message.equalsIgnoreCase(Constants.Commands.HELP)) {
-                Bot.say(Constants.Responses.HELP, event.getMessage().getChannel());
+                Bot.say(Constants.Responses.HELP, event.getMessage().getChannel(), Optional.empty());
             }
         }
     }
 
     @EventSubscriber
+    @SuppressWarnings("unused")
     public void onUserJoinedVoice(UserVoiceChannelJoinEvent event) {
-        Bot.pmSubs(event.getUser().getName(), event.getVoiceChannel().getName());
+        Bot.pmSubs(event.getUser().getName(), event.getVoiceChannel().getName(),
+                event.getUser().getPresence().getPlayingText());
     }
 
     @EventSubscriber
+    @SuppressWarnings("unused")
     public void onUserMovedVoice(UserVoiceChannelMoveEvent event) {
-        Bot.pmSubs(event.getUser().getName(), event.getNewChannel().getName());
+        Bot.pmSubs(event.getUser().getName(), event.getNewChannel().getName(),
+                event.getUser().getPresence().getPlayingText());
     }
 }

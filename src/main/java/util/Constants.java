@@ -27,5 +27,19 @@ public final class Constants {
                 + "**"+ Commands.SUBSCRIBE_1 + "** or **" + Commands.SUBSCRIBE_2 + "** \n\t\t:small_orange_diamond: _subscribe to updates on voice channel activity (I'll DM you when someone enters or moves channels!)_\n\n"
                 + "**" + Commands.UNSUBSCRIBE_1 + "** or **" + Commands.UNSUBSCRIBE_2 + "** \n\t\t:small_orange_diamond: _unsubscribe from updates on voice channel activity_ \n\n"
                 + "**" + Commands.HELP + "** \n\t\t:small_orange_diamond:_view this help message again! _";
+
+        public static final String VOICE_PREAMBLE = "If you need a friend, than you can depend on ";
+        public static final String VOICE_FINISH = " Ready to pown??";
+        public static final String VOICE_PLAYING = " They're playing %s!!";
+        public static final String NO_FRIENDS = "@everyone could use a friend, including %s. Want to play a game?";
+        public static final String PM_HEADS_UP = "Heads up, %s just hopped in %s.";
+    }
+
+    public final class Keys {
+        public static final String SUBSCRIBED_TO_VOICE_EVENTS = "SUBSCRIBED_TO_VOICE_EVENTS";
+    }
+
+    public final class Paths {
+        public static final String TOKEN_FILE_PATH = "token.rupert";
     }
 }

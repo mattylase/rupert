@@ -1,3 +1,5 @@
+package core;
+
 import sx.blah.discord.api.ClientBuilder;
 import sx.blah.discord.api.IDiscordClient;
 import sx.blah.discord.handle.obj.IChannel;
@@ -7,6 +9,7 @@ import sx.blah.discord.util.DiscordException;
 import sx.blah.discord.util.MessageBuilder;
 import sx.blah.discord.util.MissingPermissionsException;
 import sx.blah.discord.util.RateLimitException;
+import util.FileUtil;
 
 import java.io.*;
 import java.util.*;
@@ -14,12 +17,11 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Created by mattylase on 9/18/2016.
+ * The main class that keeps Rupert chugging. I should probably make this whole thing more OOP, but meh.
  */
 public class Bot {
 
     private static final String TOKEN_FILE_PATH = "token.rupert";
-    private static final String USER_FILE_PATH = "rupert_users";
 
     private static final String PREAMBLE = "If you need a friend, than you can depend on ";
     private static final String FINISH = "!! Ready to pown yall?";
@@ -42,7 +44,7 @@ public class Bot {
 
 
             // Cache existing user files on startup
-            File userDirectory = new File(USER_FILE_PATH);
+            File userDirectory = new File(FileUtil.USER_FILE_PATH);
             userDirectory.mkdir();
             userFileMap = new HashMap<>();
             if (userDirectory.exists()) {
@@ -99,10 +101,9 @@ public class Bot {
     private static Set<String> preCacheData(String attribute) throws IOException {
         Set<String> resultSet = new HashSet<>();
         if (attribute.equals(Keys.SUBSCRIBED_TO_VOICE_EVENTS)) {
-            for (String userName : userFileMap.keySet()) {
-                BufferedReader reader = new BufferedReader(new FileReader(userFileMap.get(userName)));
-                if (reader.readLine().contains(Keys.SUBSCRIBED_TO_VOICE_EVENTS)) {
-                    resultSet.add(userName);
+            for (String userId : userFileMap.keySet()) {
+                if (FileUtil.instance().fileContainsAttribute(userFileMap.get(userId), Keys.SUBSCRIBED_TO_VOICE_EVENTS)) {
+                    resultSet.add(userId);
                 }
             }
         }
@@ -119,27 +120,15 @@ public class Bot {
         }
     }
 
-    private static File createUserFile(String fileName) {
-        try {
-            File file = new File(USER_FILE_PATH + "/" + fileName);
-            if (file.createNewFile()) {
-                return file;
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
     static synchronized void modifyUserAttribute(String userId, String attribute, boolean addAttribute) {
         if (!userFileMap.containsKey(userId)) {
-            File file = createUserFile(userId);
+            File file = FileUtil.instance().createUserFile(userId);
             if (file != null) {
                 userFileMap.put(userId, file);
             }
         }
 
-        modifyUserFileAttribute(userId, attribute, addAttribute);
+        FileUtil.instance().modifyUserFileAttribute(userFileMap.get(userId), attribute, addAttribute);
 
         switch (attribute) {
             case Keys.SUBSCRIBED_TO_VOICE_EVENTS:
@@ -151,7 +140,7 @@ public class Bot {
     static void pmSubs(String joinedUserName, String channelName) {
         try {
             for (String userId : subscribedToVoiceEventSet) {
-                IUser user = client.getUserByID(userId);
+                IUser user = client.getUserByID(Long.valueOf(userId));
                 if (!user.getName().equals(joinedUserName)) {
                     user.getOrCreatePMChannel().sendMessage("Hey boy-o, just a heads up, " + joinedUserName
                             + " just hopped in " + channelName);
@@ -162,42 +151,5 @@ public class Bot {
         }
     }
 
-    private static synchronized void modifyUserFileAttribute(String userName, String attribute, boolean addAttribute) {
-        File file = userFileMap.get(userName);
-        try {
-            BufferedReader reader = new BufferedReader(new FileReader(file));
-            String line = reader.readLine();
-            StringBuilder output = new StringBuilder();
-            reader.close();
-            if (line != null) {
-                if (line.contains(",")) {
-                    List<String> list = new ArrayList<>(Arrays.asList(line.split(",")));
-                    if (addAttribute && !list.contains(attribute)) {
-                        list.add(attribute);
-                        list.forEach(s -> output.append(s).append(','));
-                    } else {
-                        list.remove(attribute);
-                        list.forEach(s -> output.append(s).append(','));
-                    }
-                } else if (!line.equals(attribute) && addAttribute){
-                    output.append(line).append(',').append(attribute);
-                } else if (addAttribute) {
-                    output.append(line);
-                }
-            } else if (addAttribute) {
-                output.append(attribute);
-            }
 
-            String outString = output.toString();
-            BufferedWriter writer = new BufferedWriter(new FileWriter(userFileMap.get(userName)));
-            if (outString.length() > 1 && outString.charAt(outString.length() - 1) == ',') {
-                outString = outString.substring(0, outString.length() - 1);
-            }
-            writer.write(outString);
-            writer.close();
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
 }

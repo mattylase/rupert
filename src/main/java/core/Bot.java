@@ -9,6 +9,7 @@ import sx.blah.discord.util.DiscordException;
 import sx.blah.discord.util.MessageBuilder;
 import sx.blah.discord.util.MissingPermissionsException;
 import sx.blah.discord.util.RateLimitException;
+import util.Constants;
 import util.FileUtil;
 
 import java.io.*;
@@ -35,6 +36,7 @@ public class Bot {
     private static IDiscordClient client;
     private static volatile Map<String, File> userFileMap;
     private static Set<String> subscribedToVoiceEventSet;
+    private static MessageBuilder messageBuilder;
 
     public static void main(String[] args) {
         try {
@@ -58,6 +60,13 @@ public class Bot {
 
             client = getClient(token, true);
             client.getDispatcher().registerListener(new Listener());
+
+            // Try to say hello on the default channel, if it exists
+            client.getChannels().forEach(channel -> {
+                if (channel.getName().equals(Constants.Channels.GFNERAL)) {
+                    say(Constants.Responses.HELP, channel);
+                }
+            });
         } catch (IOException | DiscordException e) {
             Logger.getGlobal().log(Level.ALL, "There was a problem initializing the Discord client!");
         } finally {
@@ -68,8 +77,11 @@ public class Bot {
     }
 
     static void say(String words, IChannel channel) {
+        if (messageBuilder == null) {
+            messageBuilder = new MessageBuilder(client);
+        }
         try {
-            new MessageBuilder(client).withChannel(channel).withContent(words).send();
+            messageBuilder.withChannel(channel).withContent(words).send();
         } catch (DiscordException | RateLimitException | MissingPermissionsException e) {
             e.printStackTrace();
         }

@@ -26,5 +26,5 @@ repositories {
 }
 
 dependencies {
-    compile "com.github.austinv11:Discord4j:2.9.1"
+    compile "com.discord4j:Discord4J:2.10.1"
 }
